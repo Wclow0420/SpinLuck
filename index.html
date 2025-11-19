@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinLuck - The Ultimate Fair Draw</title>
+    <link rel="icon" href="assets/SpinLuck-logo.png" type="image/png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- GSAP & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #050507;
+            --primary: #3B82F6;
+            --secondary: #8B5CF6;
+            --accent: #F472B6;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Animated Gradient Text Replacement - Color Wave */
+        /* This ensures visibility while keeping the fun animation */
+        .text-gradient .fun-letter {
+            color: #60A5FA;
+            /* Fallback/Start color */
+            animation: colorWave 4s infinite;
+            animation-delay: calc(var(--i) * 0.1s);
+        }
+
+        @keyframes colorWave {
+
+            0%,
+            100% {
+                color: #60A5FA;
+                text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+            }
+
+            33% {
+                color: #A78BFA;
+                text-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+            }
+
+            66% {
+                color: #F472B6;
+                text-shadow: 0 0 10px rgba(244, 114, 182, 0.5);
+            }
+        }
+
+        .fun-letter {
+            display: inline-block;
+            cursor: default;
+            transform-origin: center bottom;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Neon Stroke Effect */
+        .neon-stroke {
+            position: relative;
+            display: inline-block;
+            /* Fallback for visibility */
+            color: rgba(59, 130, 246, 0.1);
+            -webkit-text-stroke: 2px #3B82F6;
+        }
+
+        .neon-stroke::before {
+            content: attr(data-text);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0%;
+            /* Start at 0 */
+            height: 100%;
+            color: #3B82F6;
+            /* Filled color */
+            overflow: hidden;
+            border-right: 4px solid #60A5FA;
+            /* The moving "cursor" or light head */
+            animation: neonScan 4s linear infinite;
+            -webkit-text-stroke: 0;
+            filter: drop-shadow(0 0 8px #3B82F6);
+            white-space: nowrap;
+            opacity: 1;
+        }
+
+        @keyframes neonScan {
+            0% {
+                width: 0%;
+                opacity: 0;
+            }
+
+            5% {
+                opacity: 1;
+            }
+
+            50% {
+                width: 100%;
+                opacity: 1;
+            }
+
+            60% {
+                width: 100%;
+                opacity: 0;
+            }
+
+            100% {
+                width: 100%;
+                opacity: 0;
+            }
+        }
+
+        /* Glassmorphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Hero Animation Background */
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+        }
+
+        /* Floating Elements */
+        .floater {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            z-index: -1;
+        }
+
+        /* Interactive Button */
+        .btn-glow {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-glow::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn-glow:hover::before {
+            left: 100%;
+        }
+
+        .btn-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+        }
+
+        /* Wheel Decoration */
+        .deco-wheel {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .deco-wheel::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 20px white;
+        }
+
+        .wheel-slice {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 50%;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);
+            transform-origin: bottom center;
+        }
+
+        /* Cursor Follower */
+        #cursor-follower {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.1s, opacity 0.2s;
+            mix-blend-mode: difference;
+        }
+    </style>
+</head>
+
+<body class="antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Cursor Follower -->
+    <div id="cursor-follower" class="hidden md:block"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 top-0 left-0 px-6 py-4 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2 group cursor-pointer" onclick="window.scrollTo(0,0)">
+                <img src="assets/SpinLuck-logo.png" alt="SpinLuck Logo"
+                    class="w-8 h-8 rounded-lg shadow-lg transform group-hover:rotate-12 transition duration-500">
+                <span class="font-bold text-xl tracking-tight">Spin<span class="text-blue-400">Luck</span></span>
+            </div>
+            <a href="wheelspin.html"
+                class="hidden md:block px-6 py-2 rounded-full border border-white/10 hover:bg-white/10 transition text-sm font-medium">
+                Launch App
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+        <!-- Background Elements -->
+        <div class="absolute inset-0 grid-bg z-0"></div>
+        <div class="floater w-96 h-96 bg-blue-600 top-[-10%] left-[-10%] animate-pulse"></div>
+        <div class="floater w-96 h-96 bg-purple-600 bottom-[-10%] right-[-10%] animate-pulse"
+            style="animation-delay: 2s;"></div>
+
+        <div class="container mx-auto px-6 relative z-10 text-center">
+            <div class="inline-block mb-4 px-4 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-xs font-medium text-blue-300 tracking-wider uppercase"
+                id="hero-badge">
+                The Future of Lucky Draws
+            </div>
+
+            <h1 class="text-5xl md:text-8xl font-black mb-6 leading-tight tracking-tight interactive-text"
+                id="hero-title">
+                <!-- Content injected by JS for interactivity -->
+                Fairness Meets <br>
+                <span class="text-gradient">Pure Excitement</span>
+            </h1>
+
+            <p class="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto mb-10" id="hero-desc">
+                Experience the most transparent, interactive, and fun way to pick winners.
+                Powered by advanced randomization and stunning visuals.
+            </p>
+
+            <div class="flex flex-col md:flex-row gap-4 justify-center items-center" id="hero-btns">
+                <a href="wheelspin.html"
+                    class="btn-glow px-8 py-4 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 font-bold text-lg shadow-lg shadow-blue-500/25 flex items-center gap-3 group">
+                    <span>Start Spinning Now</span>
+                    <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+                </a>
+                <a href="#features"
+                    class="px-8 py-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 font-medium transition backdrop-blur-md">
+                    Learn More
+                </a>
+            </div>
+        </div>
+
+        <!-- Decorative Wheel Behind -->
+        <div
+            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-10 pointer-events-none z-0 deco-wheel animate-[spin_20s_linear_infinite]">
+            <!-- Generated slices via JS -->
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-32 relative">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20" id="features-header">
+                <h2 class="text-3xl md:text-5xl font-bold mb-4">Why <span class="text-blue-400">SpinLuck</span>?</h2>
+                <p class="text-gray-300">More than just a random number generator.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="glass-card p-8 rounded-3xl hover:bg-white/5 transition duration-500 group feature-card">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-scale-balanced text-2xl text-blue-400"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">100% Fair & Random</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        Our algorithm ensures every participant has an exactly equal chance of winning. No bias, just
+                        pure luck.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="glass-card p-8 rounded-3xl hover:bg-white/5 transition duration-500 group feature-card">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-wand-magic-sparkles text-2xl text-purple-400"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Stunning Visuals</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        Engage your audience with buttery smooth 60fps animations, confetti effects, and a premium dark
+                        mode design.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="glass-card p-8 rounded-3xl hover:bg-white/5 transition duration-500 group feature-card">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-pink-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-file-csv text-2xl text-pink-400"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Easy Management</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        Import thousands of participants via Excel/CSV in seconds. Manage prizes and export winners with
+                        one click.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Demo Section -->
+    <section class="py-20 overflow-hidden">
+        <div class="container mx-auto px-6">
+            <div class="glass-card rounded-[3rem] p-12 md:p-20 relative overflow-hidden text-center">
+                <!-- Background Glow -->
+                <div
+                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-[120px] opacity-20">
+                </div>
+
+                <div class="relative z-10">
+                    <h2 class="text-4xl md:text-6xl font-bold mb-8">Ready to pick a winner?</h2>
+                    <p class="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+                        Join thousands of event organizers, streamers, and companies using SpinLuck for their giveaways.
+                    </p>
+
+                    <a href="wheelspin.html"
+                        class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-white text-black text-xl font-bold hover:scale-110 transition duration-300 shadow-[0_0_40px_rgba(255,255,255,0.3)] animate-pulse">
+                        GO
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-10 border-t border-white/5">
+        <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2 opacity-50">
+                <i class="fa-solid fa-gem text-xs"></i>
+                <span class="font-bold tracking-tight">SpinLuck</span>
+            </div>
+            <div class="text-gray-500 text-sm">
+                &copy; 2025 SpinLuck. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- GSAP Animations ---
+        gsap.registerPlugin(ScrollTrigger);
+
+        // 1. Text Splitting for Interactivity
+        const titleElement = document.getElementById('hero-title');
+
+        // Manual splitting to preserve structure
+        // "Fairness Meets"
+        const part1Text = "Fairness Meets ";
+        const part1HTML = part1Text.split('').map((char, index) =>
+            char === ' ' ? '&nbsp;' : `<span class="fun-letter" style="--i: ${index}">${char}</span>`
+        ).join('');
+
+        // "Pure Excitement"
+        const part2Text = "Pure Excitement";
+        const part2HTML = part2Text.split('').map((char, index) =>
+            char === ' ' ? '&nbsp;' : `<span class="fun-letter" style="--i: ${index}">${char}</span>`
+        ).join('');
+
+        titleElement.innerHTML = `
+            <span class="neon-stroke" data-text="Fairness Meets">${part1HTML}</span> <br> 
+            <span class="text-gradient">${part2HTML}</span>
+        `;
+
+        // 2. Add Hover Effects
+        document.querySelectorAll('.fun-letter').forEach(letter => {
+            letter.addEventListener('mouseenter', () => {
+                // Pause animation on hover to let user play with it
+                letter.style.animationPlayState = 'paused';
+
+                gsap.to(letter, {
+                    scale: 1.5,
+                    rotation: Math.random() * 20 - 10,
+                    y: -10,
+                    color: "#F472B6",
+                    textShadow: "0 0 20px #F472B6",
+                    duration: 0.3,
+                    ease: "back.out(1.7)"
+                });
+            });
+
+            letter.addEventListener('mouseleave', () => {
+                letter.style.animationPlayState = 'running';
+
+                gsap.to(letter, {
+                    scale: 1,
+                    rotation: 0,
+                    y: 0,
+                    color: "inherit", // Return to animation control
+                    textShadow: "inherit",
+                    duration: 0.5,
+                    ease: "elastic.out(1, 0.3)"
+                });
+            });
+        });
+
+        // Initial States (Hide elements to prevent FOUC, but do it in JS so they are visible if JS fails)
+        // Actually, if we want to be safe against JS failure, we should NOT hide them in CSS.
+        // We use gsap.set to hide them immediately on load.
+
+        const heroElements = ["#hero-badge", "#hero-title", "#hero-desc", "#hero-btns"];
+        gsap.set(heroElements, { opacity: 0, y: 20 });
+        gsap.set(".feature-card", { opacity: 0, y: 50 });
+        gsap.set("#features-header", { opacity: 0, y: 30 });
+
+        // Hero Animation
+        const tl = gsap.timeline();
+        tl.to("#hero-badge", { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" })
+            .to("#hero-title", { y: 0, opacity: 1, duration: 1, ease: "power3.out" }, "-=0.5")
+            .to("#hero-desc", { y: 0, opacity: 1, duration: 1, ease: "power3.out" }, "-=0.7")
+            .to("#hero-btns", { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, "-=0.7");
+
+        // Features Header Animation
+        gsap.to("#features-header", {
+            scrollTrigger: {
+                trigger: "#features",
+                start: "top 85%",
+            },
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: "power3.out"
+        });
+
+        // Feature Cards Stagger
+        gsap.to(".feature-card", {
+            scrollTrigger: {
+                trigger: "#features",
+                start: "top 85%",
+            },
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.2,
+            ease: "power3.out"
+        });
+
+        // Navbar Blur Effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('backdrop-blur-md', 'bg-black/50', 'border-b', 'border-white/5');
+            } else {
+                nav.classList.remove('backdrop-blur-md', 'bg-black/50', 'border-b', 'border-white/5');
+            }
+        });
+
+        // Decorative Wheel Generation
+        const wheel = document.querySelector('.deco-wheel');
+        if (wheel) {
+            for (let i = 0; i < 12; i++) {
+                const slice = document.createElement('div');
+                slice.className = 'wheel-slice';
+                slice.style.transform = `rotate(${i * 30}deg)`;
+                wheel.appendChild(slice);
+            }
+        }
+
+        // Cursor Follower
+        const cursor = document.getElementById('cursor-follower');
+        if (cursor) {
+            document.addEventListener('mousemove', (e) => {
+                gsap.to(cursor, {
+                    x: e.clientX - 10,
+                    y: e.clientY - 10,
+                    duration: 0.1,
+                    ease: "power2.out"
+                });
+            });
+
+            // Hover effects for interactive elements
+            const interactiveElements = document.querySelectorAll('a, button, .feature-card, .fun-letter');
+            interactiveElements.forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    gsap.to(cursor, { scale: 2, backgroundColor: "rgba(255,255,255,0.1)", duration: 0.2 });
+                });
+                el.addEventListener('mouseleave', () => {
+                    gsap.to(cursor, { scale: 1, backgroundColor: "transparent", duration: 0.2 });
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

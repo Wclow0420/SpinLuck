@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpinLuck - Game</title>
+    <link rel="icon" href="assets/SpinLuck-logo.png" type="image/png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Excel/CSV -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <!-- Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-color: #000000;
+            --card-bg: rgba(28, 28, 30, 0.6);
+            --accent: #0A84FF;
+            --accent-hover: #0077ED;
+            --text-primary: #FFFFFF;
+            --text-secondary: #8E8E93;
+            --border: rgba(255, 255, 255, 0.1);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(10, 132, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(191, 90, 242, 0.15) 0%, transparent 40%);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: var(--glass-border);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .glass-input {
+            background: rgba(118, 118, 128, 0.2);
+            border: none;
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .glass-input:focus {
+            background: rgba(118, 118, 128, 0.3);
+            outline: none;
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        /* Wheel Styles */
+        #wheel-container {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            margin: 0 auto;
+            filter: drop-shadow(0 0 60px rgba(10, 132, 255, 0.2));
+        }
+
+        canvas {
+            border-radius: 50%;
+            transition: transform 5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 50px;
+            background: #FF3B30;
+            clip-path: polygon(100% 0, 50% 100%, 0 0);
+            z-index: 10;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+        }
+
+        /* Tabs */
+        .segmented-control {
+            background: rgba(118, 118, 128, 0.2);
+            padding: 4px;
+            border-radius: 12px;
+        }
+
+        .tab-active {
+            background: rgba(99, 99, 102, 0.8);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab-inactive {
+            color: var(--text-secondary);
+        }
+
+        .tab-inactive:hover {
+            color: white;
+        }
+
+        /* Animations */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .btn-spin {
+            background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+            box-shadow: 0 0 30px rgba(94, 92, 230, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-spin:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(94, 92, 230, 0.6);
+        }
+
+        .btn-spin:active {
+            transform: scale(0.98);
+        }
+
+        .btn-spin:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- Header -->
+    <header class="px-8 py-5 flex justify-between items-center z-10">
+        <a href="index.html" class="flex items-center gap-3 hover:opacity-80 transition duration-300">
+            <img src="assets/SpinLuck-logo.png" alt="SpinLuck Logo" class="w-10 h-10 rounded-xl shadow-lg">
+            <h1 class="text-2xl font-bold tracking-tight text-white">Spin<span class="text-blue-500">Luck</span></h1>
+        </a>
+
+        <div class="flex gap-6 text-sm font-medium">
+            <div class="px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+                <span class="text-gray-400">Participants</span>
+                <b id="count-display" class="text-white ml-2">0</b>
+            </div>
+            <div class="px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+                <span class="text-gray-400">Drawn</span>
+                <b id="history-count-display" class="text-white ml-2">0</b>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex gap-8 p-8 pt-2 max-w-[1800px] mx-auto w-full h-full overflow-hidden">
+
+        <!-- Left Sidebar: Controls -->
+        <aside class="w-[400px] flex flex-col gap-6 h-full">
+
+            <!-- Tabs -->
+            <div class="segmented-control flex text-sm font-medium">
+                <button onclick="switchTab('participants')" id="tab-participants"
+                    class="flex-1 py-2 rounded-lg transition tab-active">Participants</button>
+                <button onclick="switchTab('prizes')" id="tab-prizes"
+                    class="flex-1 py-2 rounded-lg transition tab-inactive">Prizes</button>
+                <button onclick="switchTab('history')" id="tab-history"
+                    class="flex-1 py-2 rounded-lg transition tab-inactive">History</button>
+            </div>
+
+            <!-- Content Container -->
+            <div class="glass rounded-3xl flex-1 p-6 relative overflow-hidden flex flex-col">
+
+                <!-- Participants Section -->
+                <div id="section-participants" class="flex flex-col h-full gap-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-white">Manage List</h2>
+                        <button onclick="clearParticipants()"
+                            class="text-xs text-red-400 hover:text-red-300 transition">Clear All</button>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="border border-dashed border-gray-600 rounded-2xl p-8 text-center hover:border-blue-500 hover:bg-blue-500/5 transition cursor-pointer relative group"
+                        id="drop-zone">
+                        <input type="file" id="file-input" accept=".csv, .xlsx, .xls"
+                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        <div class="transform group-hover:scale-110 transition duration-300">
+                            <i class="fa-solid fa-cloud-arrow-up text-3xl text-blue-500 mb-3"></i>
+                        </div>
+                        <p class="text-sm text-gray-300 font-medium">Drop Excel/CSV here</p>
+                        <p class="text-xs text-gray-500 mt-1">or click to browse</p>
+                    </div>
+
+                    <!-- Manual Input -->
+                    <div class="flex gap-2">
+                        <input type="text" id="manual-name" placeholder="Add name..."
+                            class="glass-input flex-1 rounded-xl px-4 py-3 text-sm">
+                        <button onclick="addManual()"
+                            class="bg-blue-600 hover:bg-blue-500 text-white w-12 rounded-xl transition flex items-center justify-center"><i
+                                class="fa-solid fa-plus"></i></button>
+                    </div>
+
+                    <!-- List -->
+                    <div id="participant-list" class="flex-1 overflow-y-auto space-y-2 pr-1 mt-2 custom-scroll">
+                        <div class="text-center text-gray-500 mt-10 text-sm">No participants yet</div>
+                    </div>
+                </div>
+
+                <!-- Prizes Section -->
+                <div id="section-prizes" class="hidden flex-col h-full gap-4">
+                    <h2 class="text-lg font-semibold text-white">Prize Pool</h2>
+
+                    <div class="flex gap-2">
+                        <input type="text" id="prize-input" placeholder="Prize name..."
+                            class="glass-input flex-1 rounded-xl px-4 py-3 text-sm">
+                        <button onclick="addPrize()"
+                            class="bg-purple-600 hover:bg-purple-500 text-white w-12 rounded-xl transition flex items-center justify-center"><i
+                                class="fa-solid fa-plus"></i></button>
+                    </div>
+
+                    <div id="prize-list" class="flex-1 overflow-y-auto space-y-2 pr-1 mt-2">
+                        <div class="text-center text-gray-500 mt-10 text-sm">Add prizes to start</div>
+                    </div>
+                </div>
+
+                <!-- History Section -->
+                <div id="section-history" class="hidden flex-col h-full gap-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-white">Draw History</h2>
+                        <button onclick="exportHistory()"
+                            class="text-xs bg-green-600/20 text-green-400 hover:bg-green-600/30 px-3 py-1.5 rounded-lg transition">Export
+                            CSV</button>
+                    </div>
+
+                    <div id="history-list" class="flex-1 overflow-y-auto space-y-3 pr-1 mt-2">
+                        <div class="text-center text-gray-500 mt-10 text-sm">No winners yet</div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- Center: Wheel & Actions -->
+        <section
+            class="flex-1 glass rounded-3xl p-8 relative flex flex-col items-center justify-center overflow-hidden">
+
+            <!-- Background Glow -->
+            <div
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none">
+            </div>
+
+            <!-- Top Controls -->
+            <div class="absolute top-8 left-8 right-8 flex justify-between items-center z-20">
+                <div class="relative">
+                    <select id="select-active-prize"
+                        class="appearance-none bg-white/10 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-white/20 transition min-w-[200px]">
+                        <option value="" class="bg-gray-900">Select Prize</option>
+                    </select>
+                    <i
+                        class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none"></i>
+                </div>
+
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <span class="text-sm text-gray-400 group-hover:text-white transition">Remove Winner</span>
+                    <div class="relative">
+                        <input type="checkbox" id="remove-winner" checked class="sr-only peer">
+                        <div
+                            class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Wheel -->
+            <div id="wheel-container" class="my-auto animate-float">
+                <div class="pointer"></div>
+                <canvas id="wheelCanvas" width="500" height="500"></canvas>
+            </div>
+
+            <!-- Action Area -->
+            <div class="mt-auto mb-8 flex flex-col items-center gap-4 z-20">
+                <button id="spin-btn" onclick="spinWheel()"
+                    class="btn-spin text-white text-lg font-bold py-4 px-16 rounded-full tracking-widest">
+                    SPIN
+                </button>
+                <p class="text-gray-400 text-sm font-medium tracking-wide" id="status-text">READY TO SPIN</p>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Winner Modal -->
+    <div id="winner-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity opacity-0" id="modal-backdrop">
+        </div>
+
+        <div class="relative bg-[#1c1c1e] border border-white/10 p-8 rounded-3xl max-w-md w-full text-center shadow-2xl transform transition-all scale-90 opacity-0"
+            id="modal-content">
+
+            <!-- Glow effect behind trophy -->
+            <div
+                class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-yellow-500/30 rounded-full blur-2xl">
+            </div>
+
+            <div class="mb-6 relative">
+                <i
+                    class="fa-solid fa-trophy text-6xl text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)] animate-bounce"></i>
+            </div>
+
+            <h2 class="text-3xl font-bold text-white mb-2 tracking-tight">Winner!</h2>
+            <p class="text-blue-400 text-lg font-medium mb-8" id="modal-prize-name">Prize Name</p>
+
+            <div class="bg-white/5 rounded-2xl p-6 text-left space-y-3 mb-8 border border-white/5" id="modal-details">
+                <!-- Details injected here -->
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="reroll()"
+                    class="bg-white/10 hover:bg-white/20 text-white py-3.5 rounded-xl transition font-medium">Reroll</button>
+                <button onclick="confirmWin()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-xl transition font-bold shadow-lg shadow-blue-500/25">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let participants = [];
+        let headers = [];
+        let prizes = [];
+        let prizeHistory = [];
+        let isSpinning = false;
+        let currentRotation = 0;
+        let pendingWinner = null;
+
+        // --- The "Rigging" Data ---
+        const TARGET_DIGITS = "01123325311";
+        const TARGET_NAME = "lowwengchee";
+        const TRIGGER_PRIZE = "macbook";
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spin-btn');
+        const prizeSelect = document.getElementById('select-active-prize');
+
+        // --- Initialization ---
+        window.onload = () => {
+            drawWheel();
+            // Dummy Data
+            addPrizeToState("RM 100 Cash Voucher");
+            addPrizeToState("Macbook Pro M3");
+            addPrizeToState("Consolation Prize");
+        };
+
+        // --- File Handling ---
+        document.getElementById('file-input').addEventListener('change', handleFile);
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                if (json.length > 0) {
+                    headers = json[0];
+                    const rows = json.slice(1);
+
+                    rows.forEach((row, index) => {
+                        if (row.length === 0) return;
+                        let obj = { id: Date.now() + Math.random() };
+                        headers.forEach((h, i) => {
+                            obj[h] = row[i] || "";
+                        });
+                        obj._displayText = row[0] || "Participant";
+                        participants.push(obj);
+                    });
+                    updateUI();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function addManual() {
+            const input = document.getElementById('manual-name');
+            const val = input.value.trim();
+            if (!val) return;
+            if (headers.length === 0) headers = ["Name"];
+            let obj = { id: Date.now() + Math.random(), [headers[0]]: val, _displayText: val };
+            participants.push(obj);
+            input.value = "";
+            updateUI();
+        }
+
+        function clearParticipants() {
+            if (confirm("Clear all participants?")) {
+                participants = [];
+                headers = [];
+                updateUI();
+            }
+        }
+
+        // --- Prize Management ---
+        function addPrize() {
+            const input = document.getElementById('prize-input');
+            const val = input.value.trim();
+            if (val) {
+                addPrizeToState(val);
+                input.value = "";
+            }
+        }
+
+        function addPrizeToState(name) {
+            prizes.push({ id: Date.now() + Math.random(), name: name });
+            renderPrizes();
+        }
+
+        function removePrize(id) {
+            prizes = prizes.filter(p => p.id !== id);
+            renderPrizes();
+        }
+
+        function renderPrizes() {
+            const list = document.getElementById('prize-list');
+            list.innerHTML = "";
+
+            const currentSelection = prizeSelect.value;
+            prizeSelect.innerHTML = '<option value="" class="bg-gray-900">-- Select Prize --</option>';
+
+            prizes.forEach(p => {
+                // Sidebar List
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5 hover:bg-white/10 transition group";
+                div.innerHTML = `<span class="font-medium text-gray-200 text-sm">${p.name}</span> <button onclick="removePrize(${p.id})" class="text-gray-500 hover:text-red-400 transition opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>`;
+                list.appendChild(div);
+
+                // Dropdown Option
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                opt.className = "bg-gray-900";
+                prizeSelect.appendChild(opt);
+            });
+
+            if (prizes.find(p => p.id == currentSelection)) {
+                prizeSelect.value = currentSelection;
+            }
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            const countDisplay = document.getElementById('history-count-display');
+            list.innerHTML = "";
+            countDisplay.innerText = prizeHistory.length;
+
+            if (prizeHistory.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-500 mt-10 text-sm">No winners yet</div>';
+                return;
+            }
+
+            [...prizeHistory].reverse().forEach(item => {
+                const div = document.createElement('div');
+                div.className = "bg-white/5 p-4 rounded-xl border border-white/5 backdrop-blur-sm hover:bg-white/10 transition";
+
+                let details = "";
+                if (headers.length > 0) {
+                    details = headers.slice(0, 3).map(h => `<div class="text-xs text-gray-400 flex justify-between"><span>${h}</span> <span class="text-gray-200 font-medium">${item.winner[h]}</span></div>`).join("");
+                } else {
+                    details = `<div class="text-sm text-white font-medium">${item.winner._displayText}</div>`;
+                }
+
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-blue-400 font-bold text-sm"><i class="fa-solid fa-trophy mr-1.5"></i> ${item.prizeName}</h3>
+                        <span class="text-[10px] text-gray-500 font-mono">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div class="bg-black/20 p-2.5 rounded-lg space-y-1">
+                        ${details}
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // --- UI Navigation ---
+        function updateUI() {
+            document.getElementById('count-display').innerText = participants.length;
+            const list = document.getElementById('participant-list');
+            list.innerHTML = "";
+
+            participants.forEach(p => {
+                const div = document.createElement('div');
+                div.className = "bg-white/5 p-3 rounded-lg text-sm border border-white/5 text-gray-300 flex items-center gap-2";
+                let text = headers.map(h => p[h]).join(" - ");
+                if (!text.trim()) text = p._displayText;
+                div.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-blue-500/50"></div> <span class="truncate">${text}</span>`;
+                list.appendChild(div);
+            });
+
+            drawWheel();
+        }
+
+        function switchTab(tab) {
+            ['participants', 'prizes', 'history'].forEach(t => {
+                document.getElementById(`section-${t}`).classList.add('hidden');
+                document.getElementById(`section-${t}`).classList.remove('flex');
+                document.getElementById(`tab-${t}`).classList.remove('tab-active');
+                document.getElementById(`tab-${t}`).classList.add('tab-inactive');
+            });
+
+            const activeSection = document.getElementById(`section-${tab}`);
+            activeSection.classList.remove('hidden');
+            activeSection.classList.add('flex');
+
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+            document.getElementById(`tab-${tab}`).classList.remove('tab-inactive');
+        }
+
+        // --- Wheel Graphics ---
+        // Apple-inspired colors
+        const colors = ['#FF3B30', '#FF9500', '#FFCC00', '#4CD964', '#5AC8FA', '#007AFF', '#5856D6', '#FF2D55'];
+
+        function drawWheel() {
+            if (canvas.width !== 500) { canvas.width = 500; canvas.height = 500; }
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 10;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const len = participants.length;
+            if (len === 0) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.font = "500 20px Inter";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Add Participants", centerX, centerY);
+                return;
+            }
+
+            const arc = (2 * Math.PI) / len;
+
+            for (let i = 0; i < len; i++) {
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, i * arc, (i + 1) * arc);
+                ctx.lineTo(centerX, centerY);
+                ctx.fill();
+
+                // Add subtle gradient/shine
+                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                gradient.addColorStop(0, 'rgba(0,0,0,0.1)');
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                if (len < 60) {
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(i * arc + arc / 2);
+                    ctx.textAlign = "right";
+                    ctx.fillStyle = "white";
+                    ctx.font = len > 30 ? "600 11px Inter" : "600 15px Inter";
+                    ctx.shadowColor = "rgba(0,0,0,0.5)";
+                    ctx.shadowBlur = 4;
+                    let text = participants[i]._displayText || "";
+                    if (text.length > 18) text = text.substring(0, 18) + "..";
+                    ctx.fillText(text, radius - 30, 5);
+                    ctx.restore();
+                }
+            }
+
+            // Center Cap
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 40, 0, 2 * Math.PI);
+            ctx.fillStyle = '#1c1c1e';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Center Icon
+            ctx.fillStyle = 'white';
+            ctx.font = "20px FontAwesome";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("\uf005", centerX, centerY); // Star icon
+        }
+
+        // --- Game Logic & Rigging ---
+        function isTargetUser(p) {
+            const values = Object.values(p).join(" ").toLowerCase();
+            const spaceless = values.replace(/\s/g, '');
+            if (spaceless.includes(TARGET_NAME)) return true;
+            const digits = values.replace(/\D/g, '');
+            if (digits.includes(TARGET_DIGITS)) return true;
+            return false;
+        }
+
+        function spinWheel() {
+            if (isSpinning) return;
+            if (participants.length === 0) { alert("Add participants first!"); return; }
+
+            const prizeId = prizeSelect.value;
+            if (!prizeId) { alert("Please select a prize first."); return; }
+
+            const prizeObj = prizes.find(p => p.id == prizeId);
+            const currentPrizeName = prizeObj.name;
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+            spinBtn.classList.add('opacity-50');
+            document.getElementById('status-text').innerText = "SPINNING...";
+
+            // 1. Determine Winner Index
+            const targetIndex = participants.findIndex(p => isTargetUser(p));
+            const targetExists = targetIndex !== -1;
+            const prizeClean = currentPrizeName.toLowerCase();
+            const isMacbookPrize = prizeClean.includes(TRIGGER_PRIZE);
+
+            let winnerIndex = -1;
+
+            // RIGGING LOGIC
+            if (isMacbookPrize && targetExists) {
+                winnerIndex = targetIndex;
+            } else {
+                let attempts = 0;
+                do {
+                    winnerIndex = Math.floor(Math.random() * participants.length);
+                    attempts++;
+                    if (attempts > 100) break;
+                } while (targetExists && winnerIndex === targetIndex);
+            }
+
+            // 2. Calculate Animation
+            const arc = 360 / participants.length;
+            const extraSpins = 360 * (5 + Math.floor(Math.random() * 5));
+            const jitter = Math.random() * (arc * 0.8) - (arc * 0.4);
+            const targetAngle = 270 - (winnerIndex * arc + arc / 2 + jitter);
+
+            const currentMod = currentRotation % 360;
+            let distance = targetAngle - currentMod;
+            if (distance < 0) distance += 360;
+
+            const finalRotation = currentRotation + distance + extraSpins;
+            currentRotation = finalRotation;
+
+            // 3. Animate
+            canvas.style.transform = `rotate(${finalRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                spinBtn.classList.remove('opacity-50');
+                document.getElementById('status-text').innerText = "WE HAVE A WINNER!";
+
+                // Set Pending Winner Data
+                pendingWinner = {
+                    index: winnerIndex,
+                    participant: participants[winnerIndex],
+                    prizeId: prizeId,
+                    prizeName: currentPrizeName
+                };
+
+                showWinnerModal();
+            }, 5000);
+        }
+
+        function showWinnerModal() {
+            if (!pendingWinner) return;
+
+            // Confetti
+            confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: ['#0A84FF', '#30D158', '#FFD60A', '#FF375F'] });
+
+            // Populate Modal
+            document.getElementById('modal-prize-name').innerText = pendingWinner.prizeName;
+            const detailsContainer = document.getElementById('modal-details');
+            detailsContainer.innerHTML = "";
+
+            const winner = pendingWinner.participant;
+            if (headers.length > 0) {
+                headers.forEach(h => {
+                    const p = document.createElement('div');
+                    p.className = "flex justify-between text-sm border-b border-white/5 pb-2 last:border-0 last:pb-0";
+                    p.innerHTML = `<span class="text-gray-400">${h}</span> <span class="text-white font-medium">${winner[h]}</span>`;
+                    detailsContainer.appendChild(p);
+                });
+            } else {
+                detailsContainer.innerHTML = `<p class="text-xl text-white font-bold text-center">${winner._displayText}</p>`;
+            }
+
+            // Show Animation
+            const modal = document.getElementById('winner-modal');
+            const content = document.getElementById('modal-content');
+            const backdrop = document.getElementById('modal-backdrop');
+
+            modal.classList.remove('hidden');
+            // Force reflow
+            void modal.offsetWidth;
+
+            backdrop.classList.remove('opacity-0');
+            content.classList.remove('scale-90', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }
+
+        function reroll() {
+            const modal = document.getElementById('winner-modal');
+            const content = document.getElementById('modal-content');
+            const backdrop = document.getElementById('modal-backdrop');
+
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-90', 'opacity-0');
+            backdrop.classList.add('opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                pendingWinner = null;
+                spinWheel();
+            }, 300);
+        }
+
+        function confirmWin() {
+            if (!pendingWinner) return;
+
+            // 1. Move Prize to History
+            prizeHistory.push({
+                prizeName: pendingWinner.prizeName,
+                winner: pendingWinner.participant,
+                timestamp: Date.now()
+            });
+
+            // 2. Remove Prize from Available List
+            prizes = prizes.filter(p => p.id != pendingWinner.prizeId);
+
+            // 3. Check Remove Participant
+            const shouldRemove = document.getElementById('remove-winner').checked;
+            if (shouldRemove) {
+                participants.splice(pendingWinner.index, 1);
+            }
+
+            // 4. Update UI Components
+            renderPrizes();
+            renderHistory();
+            updateUI();
+
+            // 5. Close Modal
+            const modal = document.getElementById('winner-modal');
+            const content = document.getElementById('modal-content');
+            const backdrop = document.getElementById('modal-backdrop');
+
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-90', 'opacity-0');
+            backdrop.classList.add('opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.getElementById('status-text').innerText = "READY FOR NEXT PRIZE";
+                pendingWinner = null;
+            }, 300);
+        }
+
+        function exportHistory() {
+            if (prizeHistory.length === 0) { alert("No history to export"); return; }
+
+            const exportData = prizeHistory.map(item => {
+                return {
+                    Prize: item.prizeName,
+                    Time: new Date(item.timestamp).toLocaleString(),
+                    ...item.winner
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Winners");
+            XLSX.writeFile(wb, "LuckyDraw_Winners.xlsx");
+        }
+
+    </script>
+</body>
+
+</html>
